@@ -1,0 +1,110 @@
+<!-- Created by Erion Nezha — © 2026 All rights reserved -->
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentimenti i Lajmeve — Borsa (ML) — Erion Nezha</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,'Segoe UI',sans-serif;background:#0b1220;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 14px}
+.wrap{width:100%;max-width:680px}
+h1{font-size:1.45rem;text-align:center;margin-bottom:6px}
+.sub{text-align:center;color:#94a3b8;font-size:.9rem;margin-bottom:12px}
+.center{text-align:center}
+.sim-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b88;color:#fbbf24;font-size:.75rem;padding:4px 12px;border-radius:20px;margin-bottom:14px}
+.card{background:#141d31;border:1px solid #263349;border-radius:14px;padding:18px;margin-bottom:12px}
+.hl{padding:10px 12px;border:1px solid #263349;border-radius:10px;margin-bottom:10px;background:#0f172a;font-size:.9rem;line-height:1.5}
+.hl .score{float:right;font-weight:700;font-size:.82rem;padding:2px 10px;border-radius:12px}
+.pos{background:#22c55e22;color:#4ade80}.neg{background:#ef444422;color:#f87171}.neu{background:#64748b22;color:#94a3b8}
+button{padding:13px 26px;border:none;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#0077ff);color:#04121a;font-weight:700;font-size:1rem;cursor:pointer;margin:10px 0 18px}
+button:hover{filter:brightness(1.1)}
+#verdict{display:none;text-align:center;padding:22px}
+#verdict .big{font-size:1.6rem;font-weight:800;margin-bottom:8px}
+.meter{height:16px;background:#0f172a;border-radius:10px;overflow:hidden;margin:14px 0;position:relative}
+.meter>div{height:100%;transition:width .8s}
+textarea{width:100%;min-height:70px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:10px;font-size:.9rem;font-family:inherit;margin-top:8px}
+.note{font-size:.8rem;color:#64748b;line-height:1.6;margin-top:10px}
+footer{margin-top:20px;color:#64748b;font-size:.82rem;text-align:center}
+footer strong{color:#94a3b8}
+.lbl{font-size:.82rem;color:#94a3b8;margin-bottom:6px;display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="center"><span class="sim-badge">🧪 SIMULIM EDUKATIV — jo modeli i vërtetë i trajnuar</span></div>
+  <h1>📈 Sentimenti i Lajmeve → Borsa DJIA</h1>
+  <p class="sub">25 tituj lajmesh në ditë → a <b>ngrihet</b> apo <b>bie</b> indeksi Dow Jones? Kliko "Analizo" për simulimin.</p>
+  <div class="card" id="headlines"></div>
+  <div class="center"><button onclick="analyze()">🔍 Analizo sentimentin</button></div>
+  <div class="card" id="verdict">
+    <div class="big" id="vtext"></div>
+    <div class="meter"><div id="vbar"></div></div>
+    <div id="vdetail" style="font-size:.9rem;color:#94a3b8"></div>
+    <p class="note">ℹ️ Ky është një <b>simulim edukativ</b> me fjalor sentimentesh të integruar. Notebook-u origjinal (<i>Stock Sentiment Analysis.ipynb</i>) përdor <b>Bag-of-Words + Logistic Regression / Random Forest / Naive Bayes</b> mbi mijëra tituj realë nga <i>Stock Headlines.csv</i> — shiko dosjen <i>original/</i>.</p>
+  </div>
+  <div class="card">
+    <span class="lbl">✍️ Provo titullin tënd:</span>
+    <textarea id="custom" placeholder="Shkruaj një titull lajmi në anglisht, p.sh. 'Stocks surge as tech earnings beat expectations'"></textarea>
+    <div class="center"><button onclick="analyzeCustom()" style="margin-bottom:0">Analizo titullin</button></div>
+    <div id="customOut" style="margin-top:10px;font-size:.92rem"></div>
+  </div>
+</div>
+<footer>Krijuar nga <strong>Erion Nezha</strong> — © 2026</footer>
+<script>
+const POS=['surge','surges','soar','soars','rally','rallies','gain','gains','jump','jumps','beat','beats','record','high','growth','grow','profit','profits','bull','bullish','optimism','optimistic','upgrade','upgrades','strong','stronger','rise','rises','rising','boom','rebound','recovery','confident','confidence','win','wins'];
+const NEG=['fall','falls','drop','drops','plunge','plunges','tumble','tumbles','slump','slumps','miss','misses','loss','losses','bear','bearish','fear','fears','downgrade','downgrades','weak','weaker','decline','declines','crash','crisis','recession','worry','worries','cut','cuts','layoff','layoffs','lawsuit','probe','warning','warns'];
+const headlines=[
+ "Stocks surge as tech earnings beat expectations",
+ "Dow rallies to record high on strong jobs data",
+ "Market tumbles amid recession fears",
+ "Investors optimistic as inflation cools down",
+ "Tech shares plunge after weak guidance",
+ "Bull market continues with broad gains",
+ "Analysts warn of correction as valuations soar too fast",
+ "Energy stocks jump on rising oil prices",
+ "Bank shares drop after earnings miss",
+ "Consumer confidence rebounds, retail sales rise"
+];
+function scoreText(t){
+  const w=t.toLowerCase().split(/[^a-z]+/);
+  let s=0;const hit=[];
+  w.forEach(x=>{if(POS.includes(x)){s++;hit.push('+'+x);}if(NEG.includes(x)){s--;hit.push('−'+x);}});
+  return {s,hit};
+}
+function render(){
+  document.getElementById('headlines').innerHTML=headlines.map((h,i)=>{
+    const {s}=scoreText(h);
+    const cls=s>0?'pos':s<0?'neg':'neu';
+    const lbl=s>0?'pozitiv':s<0?'negativ':'neutral';
+    return `<div class="hl"><span class="score ${cls}">${lbl}</span>${i+1}. ${h}</div>`;
+  }).join('');
+}
+function analyze(){
+  render();
+  const scores=headlines.map(h=>scoreText(h).s);
+  const total=scores.reduce((a,b)=>a+b,0);
+  const avg=total/scores.length;
+  const pos=scores.filter(s=>s>0).length, neg=scores.filter(s=>s<0).length;
+  const v=document.getElementById('verdict');v.style.display='block';
+  const vt=document.getElementById('vtext'),vb=document.getElementById('vbar');
+  const conf=Math.min(95,Math.round(50+Math.abs(avg)*28));
+  if(avg>0.1){vt.textContent='📈 DJIA parashikohet NGRITJE';vt.style.color='#4ade80';vb.style.background='#22c55e';}
+  else if(avg<-0.1){vt.textContent='📉 DJIA parashikohet RËNIE';vt.style.color='#f87171';vb.style.background='#ef4444';}
+  else{vt.textContent='➖ DJIA parashikohet STABËL';vt.style.color='#94a3b8';vb.style.background='#64748b';}
+  setTimeout(()=>{vb.style.width=conf+'%';},50);
+  document.getElementById('vdetail').textContent=`${pos} tituj pozitivë, ${neg} negativë — besueshmëria e simulimit: ${conf}%`;
+  v.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function analyzeCustom(){
+  const t=document.getElementById('custom').value.trim();
+  if(!t){document.getElementById('customOut').textContent='Shkruaj një titull më parë.';return;}
+  const {s,hit}=scoreText(t);
+  const cls=s>0?'pos':s<0?'neg':'neu';
+  const lbl=s>0?'📈 Sentiment POZITIV':s<0?'📉 Sentiment NEGATIV':'➖ Sentiment NEUTRAL';
+  document.getElementById('customOut').innerHTML=`<span class="score ${cls}">${lbl}</span><br><span style="color:#64748b;font-size:.8rem">Fjalë kyçe: ${hit.join(', ')||'asnjë'}</span>`;
+}
+render();
+</script>
+</body>
+</html>
